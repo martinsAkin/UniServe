@@ -36,6 +36,14 @@ app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Health check
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "University Maintenance API is running.",
+  });
+});
+
 // Database connection
 let databaseConnection;
 
@@ -58,7 +66,7 @@ const connectDB = async () => {
 };
 
 // Ensure database connection before API requests
-app.use(async (req, res, next) => {
+app.use("/api", async (req, res, next) => {
   try {
     if (!process.env.MONGO_URI) {
       throw new Error("MONGO_URI is missing.");
@@ -71,8 +79,13 @@ app.use(async (req, res, next) => {
     await connectDB();
     next();
   } catch (error) {
-    console.error("Database/API initialization error:", error);
-
+    console.error("Database/API initialization error:", {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      stack: error.stack,
+    });
+  
     res.status(500).json({
       success: false,
       message: "Server initialization failed.",
@@ -85,13 +98,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/admin", adminRoutes);
 
-// Health check
-app.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "University Maintenance API is running.",
-  });
-});
 
 // 404 handler
 app.use((req, res) => {
