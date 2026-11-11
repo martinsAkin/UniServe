@@ -1,6 +1,8 @@
+
 const dns = require("node:dns");
 
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
 require("dotenv").config();
 
 const express = require("express");
@@ -13,32 +15,77 @@ const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
-// Middleware
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-
+// CORS configuration
 const allowedOrigins = [
   "http://localhost:5173",
   "https://uni-serve-xi.vercel.app",
 ];
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const corsOptions = {
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-// Routes
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options(/.*/, cors(corsOptions));
+
+// Body parsers
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Database connection
+let databaseConnection;
+
+const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+
+  if (!databaseConnection) {
+    databaseConnection = mongoose.connect(process.env.MONGO_URI);
+  }
+
+  try {
+    await databaseConnection;
+    console.log("MongoDB connected successfully.");
+  } catch (error) {
+    databaseConnection = null;
+    throw error;
+  }
+};
+
+// Ensure database connection before API requests
+app.use(async (req, res, next) => {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is missing.");
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is missing.");
+    }
+
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("Database/API initialization error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server initialization failed.",
+    });
+  }
+});
+
+// API routes
 app.use("/api/auth", authRoutes);
-// app.use("/api/users", userRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/admin", adminRoutes);
 
-// Health Check
+// Health check
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -46,7 +93,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// 404 Handler
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -54,33 +101,4 @@ app.use((req, res) => {
   });
 });
 
-// Server & Database
-
-const PORT = process.env.PORT || 4000;
-
-const startServer = async () => {
-  try {
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is missing.");
-    }
-
-    if (!process.env.MONGO_URI) {
-      throw new Error("MONGO_URI is missing.");
-    }
-
-    await mongoose.connect(process.env.MONGO_URI);
-
-    console.log("MongoDB connected successfully.");
-    console.log(`Database: ${mongoose.connection.name}`);
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error("Server startup error:", error.message);
-    process.exit(1);
-  }
-};
-
-startServer();
-
+module.exports = app;
