@@ -7,6 +7,7 @@ const authorize = require("../middleware/authorize");
 
 const {
   getAllUsers,
+  getUserById,
   getDashboardStats,
   getOfficerWorkload,
   getAllRequests,
@@ -26,7 +27,8 @@ router.use(authMiddleware);
 router.use(authorize("admin"));
 
 router.get("/users", getAllUsers);
-router.patch("/:userId/role", authorize("admin"), updateUserRole);
+router.get("/users/:userId", getUserById);
+router.patch("/users/:userId/role", authorize("admin"), updateUserRole);
 router.patch("/users/:userId/status", updateUserStatus);
 
 // Dashboard

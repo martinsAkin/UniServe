@@ -95,6 +95,66 @@ const getAllUsers = async (req, res) => {
 };
 
 
+const getUserById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).select(
+      "username email role isActive createdAt"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    let requests = [];
+
+    // Maintenance officer: requests assigned to them
+    if (user.role === "maintenanceOfficer") {
+      requests = await Request.find({
+        assignedOfficer: user._id,
+        deletedAt: null,
+      })
+        .select(
+          "title description location date status completionNote author assignedOfficer createdAt updatedAt"
+        )
+        .populate("author", "username email")
+        .sort({ createdAt: -1 });
+    }
+
+    // Student/staff: requests created by them
+    else if (user.role === "studentOrstaff") {
+      requests = await Request.find({
+        author: user._id,
+        deletedAt: null,
+      })
+        .select(
+          "title description location date status completionNote author assignedOfficer createdAt updatedAt"
+        )
+        .populate("assignedOfficer", "username email")
+        .sort({ createdAt: -1 });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+      requests,
+    });
+  } catch (error) {
+    console.error("Get user by ID error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to retrieve user.",
+    });
+  }
+};
+
+
+
 const getDashboardStats = async (req, res) => {
   try {
     const match = {
@@ -403,7 +463,6 @@ const getAdminRequestById = async (req, res) => {
 };
 
 
-
 const getRequestReport = async (req, res) => {
   try {
     const { startDate, endDate, format = "json" } = req.query;
@@ -651,6 +710,7 @@ const getRequestReport = async (req, res) => {
 
 module.exports = {
     getAllUsers,
+    getUserById,
     getDashboardStats,
     getOfficerWorkload,
     getAllRequests,
