@@ -2,7 +2,7 @@ import { apiClient } from "@/lib/api-client";
 import type {
   AdminUserListResponse,
   AdminUserParams,
-  AllUsersResponse,
+  // AllUsersResponse,
   UpdatedRoleResponse,
 } from "@/types/api";
 import type { UserRole } from "@/types/domain";
@@ -13,13 +13,17 @@ export const userService = {
     apiClient.get<AdminUserListResponse>("/admin/users", { params }).then((res) => res.data),
 
   /** GET /users — unpaginated. Used to resolve a single user because GET /admin/users/:id does not exist. */
-  listAll: () => apiClient.get<AllUsersResponse>("/users").then((res) => res.data.users),
+  // listAll: () => apiClient.get<AllUsersResponse>("/users").then((res) => res.data.users),
 
   /** Role change lives on /users/:userId/role (not under /admin). */
   updateRole: (userId: string, role: UserRole) =>
     apiClient
-      .patch<UpdatedRoleResponse>(`/users/${userId}/role`, { role })
+      .patch<UpdatedRoleResponse>(`/admin/${userId}/role`, { role })
       .then((res) => res.data.user),
+
+    /** GET /admin/users/:id — retrieve a single user by ID. */
+    getById: (userId: string) =>
+      apiClient.get(`/admin/users/${userId}`).then((res) => res.data.user),
 
   /**
    * PENDING BACKEND: PATCH /admin/users/:id/status with `{ isActive: boolean }`.

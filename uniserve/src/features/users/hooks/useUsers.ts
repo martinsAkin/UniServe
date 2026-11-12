@@ -19,8 +19,8 @@ export function useAdminUsers(params: AdminUserParams) {
 export function useUserById(userId: string) {
   return useQuery({
     queryKey: queryKeys.admin.allUsers(),
-    queryFn: userService.listAll,
-    select: (users) => users.find((candidate) => candidate._id === userId) ?? null,
+    queryFn: () => userService.getById(userId),
+    select: (user) => user ?? null,
   });
 }
 

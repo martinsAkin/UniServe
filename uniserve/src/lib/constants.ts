@@ -39,8 +39,8 @@ export const TOKEN_STORAGE_KEY = "uniserve.token";
  * Flip a flag to true once the matching endpoint ships.
  */
 export const BACKEND_CAPABILITIES = {
-  userStatusUpdate: false,
-  userDetailEndpoint: false,
+  userStatusUpdate: true,
+  userDetailEndpoint: true,
   reportsEndpoint: false,
   requestHistoryForNonAdmins: false,
 } as const;
